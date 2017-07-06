@@ -2,12 +2,17 @@
 # -*- coding: utf-8 -*-
 import os
 import logging
+import requests
+import json
 from datetime import datetime, timedelta
 from twisted.web._newclient import ResponseNeverReceived
 from twisted.internet.error import TimeoutError, ConnectionRefusedError, ConnectError
-from rong_360 import fetch_free_proxy
 
 logger = logging.getLogger(__name__)
+
+HOST = '192.168.1.130'
+PROXY_HOST = 'http://{host}:8432'.format(host=HOST)
+PROXY_URL = PROXY_HOST + '/?types=0&count=100&country=国内'
 
 
 class HttpProxyMiddleware(object):
@@ -75,12 +80,44 @@ class HttpProxyMiddleware(object):
             if p["count"] >= self.dump_count_threshold:
                 p["valid"] = True
 
+    def check(self, proxy):
+        url = "https://www.chandashi.com/ranking/index/type/free/country/cn/date/20161125.html"
+        proxies = {'https': "http://" + proxy}
+
+        try:
+            r = requests.get(url, proxies=proxies, timeout=1)
+            return r.status_code == 200
+        except Exception as e:
+            return False
+
+    def get_proxies(self):
+        proxies = []
+        resp = requests.get(PROXY_URL)
+        if resp.status_code == 200:
+            for i in json.loads(resp.text):
+                proxies.append('{}:{}'.format(i[0], i[1]))
+            return proxies
+        else:
+            logger.error('cant connect proxy')
+
+    def fetch_all(self):
+        proxies = []
+        proxies += self.get_proxies()
+
+        valid_proxies = []
+        logger.info("checking proxyes validation")
+        for p in proxies:
+            if self.check(p):
+                print(p)
+                valid_proxies.append(p)
+        return valid_proxies
+
     def fetch_new_proxyes(self):
         """
         从网上抓取新的代理添加到代理列表中
         """
         logger.info("extending proxyes using fetch_free_proxyes.py")
-        new_proxyes = fetch_free_proxy.fetch_all()
+        new_proxyes = self.fetch_all()
         logger.info("new proxyes: %s" % new_proxyes)
         self.last_fetch_proxy_time = datetime.now()
 

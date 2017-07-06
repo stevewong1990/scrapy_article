@@ -52,7 +52,6 @@ COOKIES_ENABLED = True
 # Enable or disable downloader middlewares
 # See http://scrapy.readthedocs.org/en/latest/topics/downloader-middleware.html
 DOWNLOADER_MIDDLEWARES = {
-    'rong_360.rotate_useragent.RotateUserAgentMiddleware': 400,
     'rong_360.HttpProxyMiddleware.HttpProxyMiddleware': 999,
 }
 
@@ -99,15 +98,3 @@ MYSQL_PASSWD = ''
 # S3
 S3_ACCESS_KEY = "AKIAOO4XXXWGJDCMBROQ"
 S3_SECRET_KEY = "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"
-
-# headers
-HEADERS = {
-    "Upgrade-Insecure-Requests": "1",
-    "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) "
-                  "AppleWebKit/537.36 (KHTML, like Gecko) "
-                  "Chrome/58.0.3029.110 Safari/537.36",
-    "Accept": "text/html,application/xhtml+xml,application/xml;"
-              "q=0.9,image/webp,*/*;q=0.8",
-    "Accept-Encoding": "gzip, deflate, sdch",
-    "Accept-Language": "zh-CN,zh;q=0.8"
-}
