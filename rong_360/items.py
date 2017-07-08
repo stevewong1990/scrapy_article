@@ -8,12 +8,12 @@
 import scrapy
 
 
-class Rong360Item(scrapy.Item):
+class ArticleItem(scrapy.Item):
     # define the fields for your item here like:
     # name = scrapy.Field()
     raw_url = scrapy.Field()
-    title_text = scrapy.Field()
-    desc_text = scrapy.Field()
+    title = scrapy.Field()
+    desc = scrapy.Field()
     image = scrapy.Field()
     source = scrapy.Field()
     s3_key = scrapy.Field()
