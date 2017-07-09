@@ -1,7 +1,7 @@
 import boto3
 import logging
 
-from rong_360.settings import S3_ACCESS_KEY, S3_SECRET_KEY
+from scrapy_article.settings import S3_ACCESS_KEY, S3_SECRET_KEY
 
 logger = logging.getLogger(__name__)
 _s3 = None
