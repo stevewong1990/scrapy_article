@@ -1,4 +1,7 @@
 # -*- coding: utf-8 -*-
+import os
+
+from celery.schedules import crontab
 
 # Scrapy settings for rong_360 project
 #
@@ -9,10 +12,10 @@
 #     http://scrapy.readthedocs.org/en/latest/topics/downloader-middleware.html
 #     http://scrapy.readthedocs.org/en/latest/topics/spider-middleware.html
 
-BOT_NAME = 'rong_360'
+BOT_NAME = 'scrapy_article'
 
-SPIDER_MODULES = ['rong_360.spiders']
-NEWSPIDER_MODULE = 'rong_360.spiders'
+SPIDER_MODULES = ['scrapy_article.spiders']
+NEWSPIDER_MODULE = 'scrapy_article.spiders'
 
 # Crawl responsibly by identifying yourself (and your website) on the user-agent
 # USER_AGENT = 'rong_360 (+http://www.yourdomain.com)'  # 爬取得默认User-Agent
@@ -52,7 +55,7 @@ COOKIES_ENABLED = True
 # Enable or disable downloader middlewares
 # See http://scrapy.readthedocs.org/en/latest/topics/downloader-middleware.html
 DOWNLOADER_MIDDLEWARES = {
-    'rong_360.HttpProxyMiddleware.HttpProxyMiddleware': 999,
+    'scrapy_article.HttpProxyMiddleware.HttpProxyMiddleware': 999,
 }
 
 # Enable or disable extensions
@@ -66,7 +69,7 @@ DOWNLOAD_TIMEOUT = 15
 # Configure item pipelines
 # See http://scrapy.readthedocs.org/en/latest/topics/item-pipeline.html
 ITEM_PIPELINES = {
-    'rong_360.pipelines.Rong360Pipeline': 300,
+    'scrapy_article.pipelines.Pipeline': 300,
 }
 
 # Enable and configure the AutoThrottle extension (disabled by default)
@@ -100,7 +103,6 @@ MYSQL_PASSWD = 'Lyloan$1'
 S3_ACCESS_KEY = "AKIAOO4XXXWGJDCMBROQ"
 S3_SECRET_KEY = "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"
 
-
 DB_URI = ''
 
 # redis
@@ -111,35 +113,66 @@ REDIS_USER = ''
 REDIS_PASSWD = ''
 
 # celery
-CELERY_TASK_SERIALIZER = 'msgpack'
-CELERY_RESULT_SERILIZER = 'json'
-CELERY_TASK_RESULT_EXPIRES = 60 * 60 * 24
-CELERY_ACCEPT_CONTENT = ['json', 'msgpack']
-CELERY_TIMEZONE = 'Asia/Shanghai'
-CELERY_IMPORTS = ("task.format_article", "task.rong_360_article")
-CELERYBEAT_SCHEDULE = {
-    'format_account': {
-        'task': 'task.format_article.format_wechat_article',
-        'schedule': crontab(hour='*/3', minute=0),
-        'args': ()
-    },
-    # 'wechat_bot': {
-    #     'task': 'task.wechat_bot.send_message',
-    #     'schedule': crontab(hour='10, 18', minute=36),
-    #     'args': ()
-    # }
-    'rong_360_format': {
-        'task': 'task.rong_360_article.format_rong360_article',
-        'schedule': crontab(hour='*/3', minute=0),
-        'args': ()
-    },
-}
+# CELERY_TASK_SERIALIZER = 'msgpack'
+# CELERY_RESULT_SERILIZER = 'json'
+# CELERY_TASK_RESULT_EXPIRES = 60 * 60 * 24
+# CELERY_ACCEPT_CONTENT = ['json', 'msgpack']
+# CELERY_TIMEZONE = 'Asia/Shanghai'
+# CELERY_IMPORTS = ("spiders.rong_360_crawl")
+# CELERYBEAT_SCHEDULE = {
+#     'rong_360_spider': {
+#         'task': 'spiders.rong_360_crawl.rong_360_spider',
+#         'schedule': crontab(minute='*/3'),
+#         'args': ()
+#     },
+# }
 
 try:
-    from local_settings import *  # noqa
+    from scrapy_article.local_settings import *  # noqa
 except ImportError:
     pass
 
 BROKER_URL = 'redis://{}:{}@{}:6379'.format(REDIS_USER, REDIS_PASSWD,
                                             REDIS_HOST)  # noqa
 CELERY_RESULT_BACKEND = BROKER_URL
+
+LOG_CONFIG = {
+    "version": 1,
+    'formatters': {
+        'standard': {
+            'format': "[%(asctime)s] %(levelname)s "
+                      "[%(filename)s->%(funcName)s:%(lineno)s] %(message)s",
+            'datefmt': "%Y/%m/%d %H:%M:%S"
+        },
+    },
+    'handlers': {
+        'logfile': {
+            'level': 'DEBUG',
+            'class': 'logging.handlers.RotatingFileHandler',
+            'filename': os.path.join("logs", 'scrapy_article.log'),
+            'maxBytes': 2097152,  # 2MB per file
+            'backupCount': 2,  # Store up to three files
+            'formatter': 'standard',
+        },
+        "console": {
+            "level": "DEBUG",
+            "class": "logging.StreamHandler",
+            "formatter": "standard"
+        },
+    },
+    'loggers': {
+        '': {
+            'handlers': ['console'],
+            'level': 'DEBUG',
+            'propagate': False,
+        },
+        'crab': {
+            'handlers': ["logfile"],
+            'level': 'DEBUG',
+            'propagate': True,
+        }
+    }
+}
+
+# logging.config.dictConfig(LOG_CONFIG)
+# logger = logging.getLogger("scrapy_article")

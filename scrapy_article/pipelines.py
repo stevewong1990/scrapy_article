@@ -20,7 +20,7 @@ def db_handle():
     return conn
 
 
-class Rong360Pipeline(object):
+class Pipeline(object):
 
     def process_item(self, item, spider):
         dbObject = db_handle()

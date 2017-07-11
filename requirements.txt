@@ -1,0 +1,9 @@
+scrapy
+requests
+beautifulsoup4
+sqlalchemy
+pymysql
+redis
+celery>=4.0.2
+boto3
+twisted

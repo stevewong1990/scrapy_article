@@ -1,7 +1,6 @@
 import scrapy
 import arrow
 import requests
-import os
 
 from scrapy.http import Request
 from scrapy_article.items import ArticleItem
@@ -9,10 +8,13 @@ from scrapy.selector import Selector
 from scrapy_article.s3_client import upload_content
 from io import BytesIO
 from fake_useragent import UserAgent
+from scrapy_article.article import RawArticle
+# from scrapy_article.celery_app import app
 
 
+# @app.task
 class rong_360_spider(scrapy.Spider):
-    name = "rong_360"
+    name = "rong_spider"
     allowed_domains = ["rong360"]
     start_urls = [
         "https://www.rong360.com/guide/",
@@ -20,23 +22,27 @@ class rong_360_spider(scrapy.Spider):
 
     def parse(self, response):
         if response.status == 200:
+            raw_url_list = RawArticle.get_raw_url()
+            print("1231231", raw_url_list)
             for element in Selector(text=response.body).xpath(
                     "//ul[contains(@class ,'list')] | //div[contains"
                     "(@class ,'gl-block-topline')]"):
                 if element.xpath("a[@class='img']"):  # 获取带header image 的url
                     item = ArticleItem()
                     item['title'] = element.xpath("h4/a/@title | a/h4/a"
-                                                       "/@title").extract()[0]
+                                                  "/@title").extract()[0]
                     item['desc'] = element.xpath("p/text() | a/p/text()"
-                                                      ).extract()[0]
+                                                 ).extract()[0]
                     item['image'] = element.xpath("a/img/@src | a/img/@src"
                                                   ).extract()[0]
-                    item['raw_url'] = element.xpath("p/a/@href | "
-                                                    "a/p/a/@href").extract()[0]
-                    yield Request(item['raw_url'],
-                                  callback=self.parse_info,
-                                  meta={'data': item},
-                                  dont_filter=True)
+                    url = get_raw_url(element.xpath(
+                        "p/a/@href | a/p/a/@href").extract()[0], raw_url_list)
+                    if url:  # 判断url是否抓取过子页面
+                        item['raw_url'] = url
+                        yield Request(item['raw_url'],
+                                      callback=self.parse_info,
+                                      meta={'data': item},
+                                      dont_filter=True)
                 else:
                     for elem in element.xpath("li"):  # 不带header image 的url
                         item = ArticleItem()
@@ -46,14 +52,15 @@ class rong_360_spider(scrapy.Spider):
                         item['desc'] = None
                         item['image'] = None
                         if elem.xpath("a/span/text()"):  # 头条 url
-                            item['raw_url'] = elem.xpath("a[2]/@href"
-                                                         ).extract()[0]
+                            article_url = elem.xpath("a[2]/@href").extract()[0]
                         else:
-                            item['raw_url'] = elem.xpath("a/@href").extract()[0]
-                        yield Request(item['raw_url'],
-                                      callback=self.parse_info,
-                                      meta={'data': item},
-                                      dont_filter=True)
+                            article_url = elem.xpath("a/@href").extract()[0]
+                        if get_raw_url(article_url, raw_url_list):
+                            item['raw_url'] = get_raw_url(article_url, raw_url_list)
+                            yield Request(item['raw_url'],
+                                          callback=self.parse_info,
+                                          meta={'data': item},
+                                          dont_filter=True)
         else:
             req = response.request
             req.meta["change_proxy"] = True
@@ -65,9 +72,8 @@ class rong_360_spider(scrapy.Spider):
                       "q=0.9,image/webp,*/*;q=0.8",
         }
         source_time = Selector(text=response.body).xpath(
-            "//*[@class='act-info']/span/text() | //*[@class='bti_left']"
-            "/span/text()").extract()
-        if source_time:
+            "//*[@class='act-info']/span/text()").extract()
+        if source_time:  # 有的url子页面内不是文章
             if response.status == 200:
                 item = response.meta['data']
                 item['status'] = 4
@@ -75,76 +81,48 @@ class rong_360_spider(scrapy.Spider):
                 item['platform'] = '融360'
                 item['section'] = '资讯'
                 item['raw_url'] = response.url
-                source_time = Selector(text=response.body).xpath(
-                    "//*[@class='act-info']/span/text() | //*[@class='bti_left']"
-                    "/span/text()").extract()
-                if len(source_time) > 1:
-                    for res in source_time:
-                        item = get_source(res, item)
-                else:
-                    r_list = source_time[0].split('\r\n')
-                    for r in r_list:
-                        item = get_source(r, item)
+                r_list = source_time[0].split('\r\n')
+                for r in r_list:
+                    item = get_source(r, item)
                 file_name = "rong_360/{}/".format(
                     response.url.split('/')[-1].split('.')[0])
-
                 result = Selector(text=response.body).xpath(
-                    "//*[@class='act-content'] | //*[@class='dcl_box']")
+                    "//*[@class='act-content']")
                 if result:
-                    h1 = result[0].xpath("h1").extract()
-                    if h1:
-                        title = h1[0]
-                    else:
-                        title = "<h1>" + \
-                                result[0].xpath("div[1]/h1/text()").extract()[
-                                    0] + "</h1>"
-                    remark_list = result[0].xpath(
-                        "div[1]/span/text() | div[1]/div[1]/div[1]/span/text()").extract()
-                    res = ''
-                    if len(remark_list) > 1:
-                        for remark in remark_list:
-                            if "编辑" not in remark:
-                                res += remark.strip() + " "
-                    else:
-                        rem = remark_list[0].split("\r\n")
-                        for re in rem:
-                            if "作者" not in re:
-                                res += re.strip() + " "
-                    if result[0].xpath("div[1]/div[3]/p/text()"):
-                        summary = \
-                        result[0].xpath("div[1]/div[3]/p/text()").extract()[0].strip()
-                    else:
-                        summary = ""
-                    p_text = ""
+                    title = result[0].xpath("h1").extract()[0]
+                    res = ''.join([item['article_time'], item['source']])
+                    text_content = title + "\n\t" + res + "\n\t"
                     if result[0].xpath("div[2]/p"):
                         for p in result[0].xpath("div[2]/p"):
                             if p.xpath("strong/text()"):  # 文章中字体加粗的内容
-                                content = "<strong>" + p.xpath(
-                                    "strong/text()").extract()[0].strip() + "</strong>"
+                                content = add_tag(p.xpath(
+                                    "strong/text()").extract()[0].strip(),
+                                                  flag=1)
                             elif p.xpath("img"):  # 文章中带有图片的
-                                content = "<img/>" + p.xpath("img/@src").extract()[
-                                    0].strip()
+                                content = add_tag(p.xpath(
+                                    "img/@src").extract()[0].strip(), flag=2)
                             elif p.xpath("a"):  # 排除文章内容中有广告语的内容
                                 content = ""
                             else:
                                 content = p.xpath("text()").extract()[0].strip()
-                            p_text += "\n\t" + content
+                            text_content += ''.join("\n\t" + content)
                     else:
                         for contents in result[0].xpath("p"):
                             if contents.xpath("strong/text()"):
-                                text = "<strong>" + contents.xpath(
-                                    "strong/text()").extract()[0].strip() + "</strong>"
+                                text = add_tag(contents.xpath(
+                                    "strong/text()").extract()[0].strip(), flag=1)
                             elif contents.xpath("img"):
-                                text = "<img/>" + \
-                                       contents.xpath("img/@src").extract()[
-                                           0].strip()
+                                text = add_tag(contents.xpath(
+                                    "img/@src").extract()[0].strip(), flag=2)
                             else:
                                 if "【独家稿件及免责声明】" not in contents.xpath(
                                         "text()").extract()[0]:
-                                    text = contents.xpath("text()").extract()[0].strip()
-                            p_text += "\n\t" + text
-                    text_content = title + "\n\t" + res + "\n\t" + summary + "\n\t" + p_text
-                    item['s3_key'] = upload_path(text_content.strip(), file_name + "index.html", content_type='text/html; charset=utf-8')
+                                    text = contents.xpath("text()").extract()[
+                                        0].strip()
+                            text_content += ''.join("\n\t" + text)
+                    item['s3_key'] = upload_path(text_content.strip(),
+                                                 file_name + "index.html",
+                                                 content_type='text/html; charset=utf-8')
 
                 if item.get('image'):  # 把header image存到s3中
                     image_name = file_name + item.get('image').split('/')[-1]
@@ -176,8 +154,19 @@ def get_user_agent():
 def get_source(re, item):
     if len(re.split('来源：')) > 1:
         item['source'] = re.split('来源：')[-1]
-    elif len(re.split('日期：')) > 1:
-        item['article_time'] = re.split('日期：')[-1]
     elif len(re.split('时间：')) > 1:
         item['article_time'] = re.split('时间：')[-1]
     return item
+
+
+def add_tag(content, flag):
+    if flag == 1:
+        return "<strong>" + content + "</strong>"
+    else:
+        return "<img>" + content
+
+
+def get_raw_url(url, url_list):
+    if url not in url_list:
+        return url
+
