@@ -9,7 +9,7 @@ REDIS_PASSWD = ''
 
 #celery
 CELERY_TASK_SERIALIZER = 'msgpack'
-CELERYD_MAX_TASKS_PER_CHILD = 1
+CELERYD_MAX_TASKS_sPER_CHILD = 1
 CELERY_RESULT_SERILIZER = 'json'
 CELERY_TASK_RESULT_EXPIRES = 60 * 60 * 24
 CELERY_ACCEPT_CONTENT = ['json', 'msgpack']
@@ -22,6 +22,11 @@ CELERYBEAT_SCHEDULE = {
         'args': ()
     },
 }
+
+try:
+    from scrapy_article.local_settings import *  # noqa
+except ImportError:
+    pass
 
 BROKER_URL = 'redis://{}:{}@{}:6379'.format(REDIS_USER, REDIS_PASSWD,
                                             REDIS_HOST)
