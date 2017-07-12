@@ -1,19 +1,20 @@
-import scrapy
+# -*- coding: utf-8 -*-
+
 import arrow
 import requests
+import scrapy
+import time
 
-from scrapy.http import Request
-from scrapy_article.items import ArticleItem
-from scrapy.selector import Selector
-from scrapy_article.s3_client import upload_content
 from io import BytesIO
 from fake_useragent import UserAgent
-from scrapy_article.article import RawArticle
-# from scrapy_article.celery_app import app
+from scrapy.http import Request
+from scrapy.selector import Selector
+from scrapy_article.items import ArticleItem
+from scrapy_common.s3_client import upload_content
+from scrapy_article.pipelines import get_all_rawl_url
 
 
-# @app.task
-class rong_360_spider(scrapy.Spider):
+class Rong360Spider(scrapy.Spider):
     name = "rong_spider"
     allowed_domains = ["rong360"]
     start_urls = [
@@ -22,11 +23,11 @@ class rong_360_spider(scrapy.Spider):
 
     def parse(self, response):
         if response.status == 200:
-            raw_url_list = RawArticle.get_raw_url()
-            print("1231231", raw_url_list)
+            raw_url_list = get_all_rawl_url()
             for element in Selector(text=response.body).xpath(
                     "//ul[contains(@class ,'list')] | //div[contains"
                     "(@class ,'gl-block-topline')]"):
+                time.sleep(10)
                 if element.xpath("a[@class='img']"):  # 获取带header image 的url
                     item = ArticleItem()
                     item['title'] = element.xpath("h4/a/@title | a/h4/a"
@@ -37,6 +38,7 @@ class rong_360_spider(scrapy.Spider):
                                                   ).extract()[0]
                     url = get_raw_url(element.xpath(
                         "p/a/@href | a/p/a/@href").extract()[0], raw_url_list)
+                    self.logger.info('request url is %s', url)
                     if url:  # 判断url是否抓取过子页面
                         item['raw_url'] = url
                         yield Request(item['raw_url'],
@@ -56,7 +58,9 @@ class rong_360_spider(scrapy.Spider):
                         else:
                             article_url = elem.xpath("a/@href").extract()[0]
                         if get_raw_url(article_url, raw_url_list):
-                            item['raw_url'] = get_raw_url(article_url, raw_url_list)
+                            item['raw_url'] = get_raw_url(article_url,
+                                                          raw_url_list)
+                            self.logger.info('request url is %s', item['raw_url'])
                             yield Request(item['raw_url'],
                                           callback=self.parse_info,
                                           meta={'data': item},
@@ -64,6 +68,7 @@ class rong_360_spider(scrapy.Spider):
         else:
             req = response.request
             req.meta["change_proxy"] = True
+            self.logger.info("chang proxy")
             yield req
 
     def parse_info(self, response):
@@ -73,6 +78,7 @@ class rong_360_spider(scrapy.Spider):
         }
         source_time = Selector(text=response.body).xpath(
             "//*[@class='act-info']/span/text()").extract()
+        self.logger.info('request url is %s', source_time)
         if source_time:  # 有的url子页面内不是文章
             if response.status == 200:
                 item = response.meta['data']
@@ -110,13 +116,15 @@ class rong_360_spider(scrapy.Spider):
                         for contents in result[0].xpath("p"):
                             if contents.xpath("strong/text()"):
                                 text = add_tag(contents.xpath(
-                                    "strong/text()").extract()[0].strip(), flag=1)
+                                    "strong/text()").extract()[0].strip(),
+                                               flag=1)
                             elif contents.xpath("img"):
                                 text = add_tag(contents.xpath(
                                     "img/@src").extract()[0].strip(), flag=2)
                             else:
-                                if "【独家稿件及免责声明】" not in contents.xpath(
-                                        "text()").extract()[0]:
+                                if "【独家稿件及免责声明】" not in \
+                                        contents.xpath(
+                                                "text()").extract()[0]:
                                     text = contents.xpath("text()").extract()[
                                         0].strip()
                             text_content += ''.join("\n\t" + text)
@@ -134,10 +142,12 @@ class rong_360_spider(scrapy.Spider):
                     if img_response.status_code == 200:
                         content = BytesIO(img_response.content)
                         item['image'] = upload_path(content, image_name)
+                self.logger.info('item is %s', item)
                 yield item
             else:
                 req = response.request
                 req.meta["change_proxy"] = True
+                self.logger.info("chang proxy")
                 yield req
 
 
@@ -169,4 +179,3 @@ def add_tag(content, flag):
 def get_raw_url(url, url_list):
     if url not in url_list:
         return url
-

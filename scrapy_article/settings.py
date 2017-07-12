@@ -1,8 +1,6 @@
 # -*- coding: utf-8 -*-
 import os
 
-from celery.schedules import crontab
-
 # Scrapy settings for rong_360 project
 #
 # For simplicity, this file contains only settings considered important or
@@ -55,6 +53,7 @@ COOKIES_ENABLED = True
 # Enable or disable downloader middlewares
 # See http://scrapy.readthedocs.org/en/latest/topics/downloader-middleware.html
 DOWNLOADER_MIDDLEWARES = {
+    'scrapy_article.random_useragent.RandomUserAgentMiddleware': 400,
     'scrapy_article.HttpProxyMiddleware.HttpProxyMiddleware': 999,
 }
 
@@ -69,7 +68,7 @@ DOWNLOAD_TIMEOUT = 15
 # Configure item pipelines
 # See http://scrapy.readthedocs.org/en/latest/topics/item-pipeline.html
 ITEM_PIPELINES = {
-    'scrapy_article.pipelines.Pipeline': 300,
+    'scrapy_article.pipelines.scrapy_articlePipeline': 300,
 }
 
 # Enable and configure the AutoThrottle extension (disabled by default)
@@ -93,6 +92,7 @@ ITEM_PIPELINES = {
 # HTTPCACHE_IGNORE_HTTP_CODES = []
 # HTTPCACHE_STORAGE = 'scrapy.extensions.httpcache.FilesystemCacheStorage'
 
+
 # mysql
 MYSQL_HOST = '139.196.120.201'
 MYSQL_DBNAME = 'spider'
@@ -103,76 +103,8 @@ MYSQL_PASSWD = 'Lyloan$1'
 S3_ACCESS_KEY = "AKIAOO4XXXWGJDCMBROQ"
 S3_SECRET_KEY = "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"
 
-DB_URI = ''
+LOG_FILE = 'logs/spider.log'
+# LOG_FILE = 'E:/workspace/rong_360/logs/spider.log'
+LOG_FORMAT = '%(levelname)s %(asctime)s [%(name)s:%(module)s:%(funcName)s:%(lineno)s] [%(exc_info)s] %(message)s'
 
-# redis
-REDIS_HOST = ''
-REDIS_PORT = 6379
-REDIS_NO = 0
-REDIS_USER = ''
-REDIS_PASSWD = ''
-
-# celery
-# CELERY_TASK_SERIALIZER = 'msgpack'
-# CELERY_RESULT_SERILIZER = 'json'
-# CELERY_TASK_RESULT_EXPIRES = 60 * 60 * 24
-# CELERY_ACCEPT_CONTENT = ['json', 'msgpack']
-# CELERY_TIMEZONE = 'Asia/Shanghai'
-# CELERY_IMPORTS = ("spiders.rong_360_crawl")
-# CELERYBEAT_SCHEDULE = {
-#     'rong_360_spider': {
-#         'task': 'spiders.rong_360_crawl.rong_360_spider',
-#         'schedule': crontab(minute='*/3'),
-#         'args': ()
-#     },
-# }
-
-try:
-    from scrapy_article.local_settings import *  # noqa
-except ImportError:
-    pass
-
-BROKER_URL = 'redis://{}:{}@{}:6379'.format(REDIS_USER, REDIS_PASSWD,
-                                            REDIS_HOST)  # noqa
-CELERY_RESULT_BACKEND = BROKER_URL
-
-LOG_CONFIG = {
-    "version": 1,
-    'formatters': {
-        'standard': {
-            'format': "[%(asctime)s] %(levelname)s "
-                      "[%(filename)s->%(funcName)s:%(lineno)s] %(message)s",
-            'datefmt': "%Y/%m/%d %H:%M:%S"
-        },
-    },
-    'handlers': {
-        'logfile': {
-            'level': 'DEBUG',
-            'class': 'logging.handlers.RotatingFileHandler',
-            'filename': os.path.join("logs", 'scrapy_article.log'),
-            'maxBytes': 2097152,  # 2MB per file
-            'backupCount': 2,  # Store up to three files
-            'formatter': 'standard',
-        },
-        "console": {
-            "level": "DEBUG",
-            "class": "logging.StreamHandler",
-            "formatter": "standard"
-        },
-    },
-    'loggers': {
-        '': {
-            'handlers': ['console'],
-            'level': 'DEBUG',
-            'propagate': False,
-        },
-        'crab': {
-            'handlers': ["logfile"],
-            'level': 'DEBUG',
-            'propagate': True,
-        }
-    }
-}
-
-# logging.config.dictConfig(LOG_CONFIG)
-# logger = logging.getLogger("scrapy_article")
+LOG_LEVEL = 'INFO'

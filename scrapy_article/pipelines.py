@@ -1,11 +1,8 @@
 # -*- coding: utf-8 -*-
 import pymysql.cursors
-import logging
 
 from scrapy.conf import settings
-
-
-logger = logging.getLogger(__name__)
+from scrapy import log
 
 
 def db_handle():
@@ -20,7 +17,7 @@ def db_handle():
     return conn
 
 
-class Pipeline(object):
+class scrapy_articlePipeline(object):
 
     def process_item(self, item, spider):
         dbObject = db_handle()
@@ -36,6 +33,20 @@ class Pipeline(object):
             cursor.execute(sql, data)
             dbObject.commit()
         except BaseException as e:
-            logger.error('***************sql err************* %s' % e)
+            self.logger.info('save sql exception is %s', e)
             dbObject.rollback()
         return item
+
+
+def get_all_rawl_url():
+    db_object = db_handle()
+    cursor = db_object.cursor()
+    sql = 'select vr.raw_url from v2_rawpromotion vr'
+    try:
+        cursor.execute(sql)
+        raw_url_list = cursor.fetchall()
+        db_object.commit()
+    except BaseException as e:
+        log.info('select sql exception is %s', e)
+        db_object.rollback()
+    return raw_url_list

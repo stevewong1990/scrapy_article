@@ -7,3 +7,7 @@ redis
 celery>=4.0.2
 boto3
 twisted
+arrow
+fake_useragent
+msgpack-python
+eventlet>=0.21.0
