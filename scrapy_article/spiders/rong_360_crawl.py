@@ -142,7 +142,6 @@ class Rong360Spider(scrapy.Spider):
                     if img_response.status_code == 200:
                         content = BytesIO(img_response.content)
                         item['image'] = upload_path(content, image_name)
-                self.logger.info('item is %s', item)
                 yield item
             else:
                 req = response.request

@@ -68,7 +68,7 @@ DOWNLOAD_TIMEOUT = 15
 # Configure item pipelines
 # See http://scrapy.readthedocs.org/en/latest/topics/item-pipeline.html
 ITEM_PIPELINES = {
-    'scrapy_article.pipelines.scrapy_articlePipeline': 300,
+    'scrapy_article.pipelines.ScrapyArticlePipeline': 300,
 }
 
 # Enable and configure the AutoThrottle extension (disabled by default)
@@ -94,10 +94,10 @@ ITEM_PIPELINES = {
 
 
 # mysql
-MYSQL_HOST = '139.196.120.201'
-MYSQL_DBNAME = 'spider'
-MYSQL_USER = 'lyloan'
-MYSQL_PASSWD = 'Lyloan$1'
+MYSQL_HOST = ''
+MYSQL_DBNAME = ''
+MYSQL_USER = ''
+MYSQL_PASSWD = ''
 
 # S3
 S3_ACCESS_KEY = "AKIAOO4XXXWGJDCMBROQ"

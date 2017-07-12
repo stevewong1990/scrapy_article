@@ -1,7 +1,7 @@
 from celery.schedules import crontab
 
 # redis
-REDIS_HOST = '192.168.1.130'
+REDIS_HOST = ''
 REDIS_PORT = 6379
 REDIS_NO = 0
 REDIS_USER = ''
@@ -18,7 +18,7 @@ CELERY_IMPORTS = ("scrapy_common.tasks")
 CELERYBEAT_SCHEDULE = {
     'rong_360': {
         'task': 'scrapy_common.tasks.crawl',
-        'schedule': crontab(hour='18', minute='30'),
+        'schedule': crontab(hour='*/3'),
         'args': ()
     },
 }
