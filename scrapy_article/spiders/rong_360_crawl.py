@@ -60,7 +60,8 @@ class Rong360Spider(scrapy.Spider):
                         if get_raw_url(article_url, raw_url_list):
                             item['raw_url'] = get_raw_url(article_url,
                                                           raw_url_list)
-                            self.logger.info('request url is %s', item['raw_url'])
+                            self.logger.info('request url is %s',
+                                             item['raw_url'])
                             yield Request(item['raw_url'],
                                           callback=self.parse_info,
                                           meta={'data': item},
@@ -100,34 +101,10 @@ class Rong360Spider(scrapy.Spider):
                     text_content = title + "\n\t" + res + "\n\t"
                     if result[0].xpath("div[2]/p"):
                         for p in result[0].xpath("div[2]/p"):
-                            if p.xpath("strong/text()"):  # 文章中字体加粗的内容
-                                content = add_tag(p.xpath(
-                                    "strong/text()").extract()[0].strip(),
-                                                  flag=1)
-                            elif p.xpath("img"):  # 文章中带有图片的
-                                content = add_tag(p.xpath(
-                                    "img/@src").extract()[0].strip(), flag=2)
-                            elif p.xpath("a"):  # 排除文章内容中有广告语的内容
-                                content = ""
-                            else:
-                                content = p.xpath("text()").extract()[0].strip()
-                            text_content += ''.join("\n\t" + content)
+                            text_content += ''.join("\n\t" + get_text(p))
                     else:
                         for contents in result[0].xpath("p"):
-                            if contents.xpath("strong/text()"):
-                                text = add_tag(contents.xpath(
-                                    "strong/text()").extract()[0].strip(),
-                                               flag=1)
-                            elif contents.xpath("img"):
-                                text = add_tag(contents.xpath(
-                                    "img/@src").extract()[0].strip(), flag=2)
-                            else:
-                                if "【独家稿件及免责声明】" not in \
-                                        contents.xpath(
-                                                "text()").extract()[0]:
-                                    text = contents.xpath("text()").extract()[
-                                        0].strip()
-                            text_content += ''.join("\n\t" + text)
+                            text_content += ''.join("\n\t" + get_text(contents))
                     item['s3_key'] = upload_path(text_content.strip(),
                                                  file_name + "index.html",
                                                  content_type='text/html; charset=utf-8')
@@ -178,3 +155,18 @@ def add_tag(content, flag):
 def get_raw_url(url, url_list):
     if url not in url_list:
         return url
+
+
+def get_text(contents):
+    if contents.xpath("strong/text()"):  # 文章中字体加粗的内容
+        text = contents.xpath("string(.)").extract()[0].strip()
+    elif contents.xpath("img"):  # 文章中带有图片的
+        text = contents.xpath("img/@src").extract()[0].strip()
+    else:
+        if contents.xpath("a | strong/a"):  # 排除文章内容中有广告语的内容
+            text = ""
+        elif "【独家稿件及免责声明】" in contents.xpath("text()").extract()[0].strip():
+            text = ""
+        else:
+            text = contents.xpath("string(.)").extract()[0].strip()
+    return text
