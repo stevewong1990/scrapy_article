@@ -4,13 +4,14 @@ import os
 import logging
 import requests
 import json
+
 from datetime import datetime, timedelta
 from twisted.web._newclient import ResponseNeverReceived
 from twisted.internet.error import TimeoutError, ConnectionRefusedError, ConnectError
+from scrapy_article.settings import HOST
 
 logger = logging.getLogger(__name__)
 
-HOST = '192.168.1.130'
 PROXY_HOST = 'http://{host}:8432'.format(host=HOST)
 PROXY_URL = PROXY_HOST + '/?types=0&count=100&country=国内'
 
