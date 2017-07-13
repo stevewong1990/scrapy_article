@@ -104,7 +104,12 @@ S3_ACCESS_KEY = "AKIAOO4XXXWGJDCMBROQ"
 S3_SECRET_KEY = "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"
 
 LOG_FILE = 'logs/spider.log'
-# LOG_FILE = 'E:/workspace/rong_360/logs/spider.log'
 LOG_FORMAT = '%(levelname)s %(asctime)s [%(name)s:%(module)s:%(funcName)s:%(lineno)s] [%(exc_info)s] %(message)s'
 
 LOG_LEVEL = 'INFO'
+
+
+try:
+    from scrapy_article.local_settings import *  # noqa
+except ImportError:
+    pass

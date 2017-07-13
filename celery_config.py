@@ -23,6 +23,11 @@ CELERYBEAT_SCHEDULE = {
     },
 }
 
+try:
+    from scrapy_article.local_settings import *  # noqa
+except ImportError:
+    pass
+
 BROKER_URL = 'redis://{}:{}@{}:6379'.format(REDIS_USER, REDIS_PASSWD,
                                             REDIS_HOST)
 CELERY_RESULT_BACKEND = BROKER_URL
