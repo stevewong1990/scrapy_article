@@ -108,6 +108,8 @@ LOG_FORMAT = '%(levelname)s %(asctime)s [%(name)s:%(module)s:%(funcName)s:%(line
 
 LOG_LEVEL = 'INFO'
 
+# proxy
+HOST = ''
 
 try:
     from scrapy_article.local_settings import *  # noqa
